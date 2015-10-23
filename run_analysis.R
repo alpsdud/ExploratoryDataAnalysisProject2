@@ -67,6 +67,8 @@ all_data <- tbl_df(cbind(combined_subject_data,y_data,mean_std_data_only))
 
 ## Compute the mean per subject and activities
 all_data_average <- tbl_df(aggregate(all_data[,3:88],list(all_data$Subject,all_data$Activities),mean))
+names(all_data_average)[1] <- "Subject"
+names(all_data_average)[2] <- "Activities"
 
 #############################################
 

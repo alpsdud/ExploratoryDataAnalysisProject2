@@ -1,33 +1,28 @@
-################################################
-## PLOT3
+## This script will answer the questions  which of these four sources have seen decreases and increases in emissions from 1999-2008 for Baltimore City
 
-# read the txt file and load it to R
-hpc <- read.table("./household_power_consumption/household_power_consumption.txt",sep =";",header= TRUE)
+## Pulls the data
+NEI <- readRDS("./summarySCC_PM25.rds")
+SCC <- readRDS("./Source_Classification_Code.rds")
 
-#install lubridate package
-install.packages("lubridate")
-library(lubridate)
+## use sqldf and ggplot2 packages
+install.packages("sqldf")
+install.packages("ggplot2")
+library(sqldf)
+library(ggplot2)
 
-#convert the Date and time factor format to date and character
-hpc$Date <- dmy(hpc$Date)
-hpc$Date <- as.Date(hpc$Date)
-hpc$Time <- as.character(hpc$Time)
+## Pull the dataset
+q3 <- sqldf("select year, type, sum(Emissions) as Emissions from NEI where fips = '24510' group by year, type order by year")
+
+#q3$year <-  as.character(q3$year) 
+#qplot(year,Emissions, data = q3, facets = . ~ type,xlab = "Year",ylab = "Total Emissions",geom = "line", main = "Total Emissions by Year in Baltimore City, MD")
 
 
-#filter only days Feb 1 and 2 2007
-hpc_filter <- subset(hpc,Date >= as.Date("2007-02-01") & Date <=as.Date("2007-02-02"))
-
-#combine the date and time columns into 1. Create a new column named DateTime
-DateTime <- as.POSIXct(paste(hpc_filter$Date, hpc_filter$Time), format="%Y-%m-%d %H:%M:%S")
-hpc_filter$DateTime <- DateTime
-
- 
 #Export to plot3.png
- 
-png("plot3.png", width = 480, height= 480)
-with(hpc_filter,plot(DateTime,Sub_metering_1,type = "l"))
-plot(hpc_filter$DateTime,hpc_filter$Sub_metering_1,type = "l",xlab= "",ylab ="Energy sub metering")
-lines(hpc_filter$DateTime,hpc_filter$Sub_metering_2,col = "red")
-lines(hpc_filter$DateTime,hpc_filter$Sub_metering_3,col = "blue")
-legend("topright", col= c("black","red","blue"),legend= c("Sub_metering_1","Sub_metering_2","Sub_metering_3"), lwd=c(2.5,2.5))
+png("plot3.png", width = 800, height= 800)
+q3_plot <- ggplot(q3, aes(year,Emissions))
+q3_plot +geom_point(colour="black", size = 3, show_guide = TRUE) + facet_grid(. ~ type) + xlab("Year") + ylab("Total Emissions") + ggtitle("Total Emissions by Year in Baltimore City, MD")
 dev.off()
+
+
+## Non-Road , Nonpoint and On-Road have consistently decreased in emmisions. On the other hand, Point has seen some increased in 1999, 2002
+## and 2005 but went down in 2008.

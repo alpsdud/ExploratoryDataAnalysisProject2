@@ -1,32 +1,23 @@
-################################################
-## PLOT2
+## This script will answer the question if total emissions from PM2.5 decreased in the Baltimore City, MD from 1999 to 2008
 
-# read the txt file and load it to R
-hpc <- read.table("./household_power_consumption/household_power_consumption.txt",sep =";",header= TRUE)
-
-#install lubridate package
-install.packages("lubridate")
-library(lubridate)
-
-#convert the Date and time factor format to date and character
-hpc$Date <- dmy(hpc$Date)
-hpc$Date <- as.Date(hpc$Date)
-hpc$Time <- as.character(hpc$Time)
+## Pulls the data
+NEI <- readRDS("./summarySCC_PM25.rds")
+SCC <- readRDS("./Source_Classification_Code.rds")
 
 
-#filter only days Feb 1 and 2 2007
-hpc_filter <- subset(hpc,Date >= as.Date("2007-02-01") & Date <=as.Date("2007-02-02"))
+## use sqldf package
+install.packages("sqldf")
+library(sqldf)
 
-#combine the date and time columns into 1. Create a new column named DateTime
-DateTime <- as.POSIXct(paste(hpc_filter$Date, hpc_filter$Time), format="%Y-%m-%d %H:%M:%S")
-hpc_filter$DateTime <- DateTime
+## Pull the dataset
+q2 <- sqldf("select year, sum(Emissions) as Emissions from NEI where fips = '24510' group by year order by year")
 
-hpc_filter$Global_active_power <- as.character((hpc_filter$Global_active_power))
-hpc_filter$Global_active_power <- as.numeric((hpc_filter$Global_active_power))
- 
- 
 
 #Export to plot2.png
 png("plot2.png", width = 480, height= 480)
-plot(hpc_filter$DateTime,hpc_filter$Global_active_power,type = "l",xlab= "",ylab ="Global Active Power (kilowatts)" )
+with(q2,plot(year,Emissions,col = "blue", type = "l",pch = 20,ylab = "Total Emissions",
+              xlab = "Year",main = "Total Emissions by Year in Baltimore City, MD"))
 dev.off()
+
+
+## Based on the graph, we can conclude that there was a decrease in total emissions in Baltimore City, MD from 1998 to 2008.

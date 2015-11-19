@@ -1,42 +1,35 @@
-################################################
-## PLOT4
+## This script will answer the question  how have emissions from coal combustion-related sources changed from 1999-2008
 
-# read the txt file and load it to R
-hpc <- read.table("./household_power_consumption/household_power_consumption.txt",sep =";",header= TRUE)
+## Pulls the data
+NEI <- readRDS("./summarySCC_PM25.rds")
+SCC <- readRDS("./Source_Classification_Code.rds")
 
-#install lubridate package
-install.packages("lubridate")
-library(lubridate)
+## use sqldf and ggplot2 packages
+library(sqldf)
+library(ggplot2)
 
-#convert the Date and time factor format to date and character
-hpc$Date <- dmy(hpc$Date)
-hpc$Date <- as.Date(hpc$Date)
-hpc$Time <- as.character(hpc$Time)
+#checked the SCC variables which of them pertains to  coal combustion. Run the unique function 1
+# variable at a time.  It was found out that itis the EI.Sector column.
+unique(SCC$Data.Category)
+unique(SCC$Short.Name)
+unique(SCC$EI.Sector)
+unique(SCC$Option.Group)
 
 
-#filter only days Feb 1 and 2 2007
-hpc_filter <- subset(hpc,Date >= as.Date("2007-02-01") & Date <=as.Date("2007-02-02"))
+## Pull the dataset
+q4 <- sqldf("select n.year, sum(n.Emissions) as Emissions 
+            from NEI n
+            inner join SCC s
+              on n.SCC = s.SCC
+            where s.[EI.Sector] like '%coal%'
+            group by n.year order by n.year")
+ 
 
-#combine the date and time columns into 1. Create a new column named DateTime
-DateTime <- as.POSIXct(paste(hpc_filter$Date, hpc_filter$Time), format="%Y-%m-%d %H:%M:%S")
-hpc_filter$DateTime <- DateTime
-
-hpc_filter$Global_active_power <- as.character((hpc_filter$Global_active_power))
-hpc_filter$Global_active_power <- as.numeric((hpc_filter$Global_active_power))
-hist(hpc_filter$Global_active_power, col = "red")
-hist(hpc_filter$Global_active_power, col = "red", xlab = "Global Active Power (kilowatts)" ,main  = "Global Active Power")
-
-#Export to plot4
-png("plot4.png", width = 480, height= 480)
-par(mfrow = c(2,2))
-
-with (hpc_filter,{
-  plot(hpc_filter$DateTime,hpc_filter$Global_active_power,type = "l",xlab= "",ylab ="Global Active Power" )
-  plot(hpc_filter$DateTime,hpc_filter$Voltage,type = "l",xlab= "",ylab ="Voltage")
-  plot(hpc_filter$DateTime,hpc_filter$Sub_metering_1,type = "l",xlab= "",ylab ="Energy sub metering")
-  lines(hpc_filter$DateTime,hpc_filter$Sub_metering_2,col = "red")
-  lines(hpc_filter$DateTime,hpc_filter$Sub_metering_3,col = "blue")
-  legend("topright", col= c("black","red","blue"),legend= c("Sub_metering_1","Sub_metering_2","Sub_metering_3"), lwd=c(1.5,1.5))
-  plot(hpc_filter$DateTime,hpc_filter$Global_reactive_power,type = "l",xlab= "",ylab ="Global_reactive_power")
-})
+#Export to plot4.png
+png("plot4.png", width = 800, height= 800)
+q4_plot <- ggplot(q4, aes(year,Emissions))
+q4_plot +geom_point(colour="blue", size = 4, show_guide = TRUE) + xlab("Year") + ylab("Total Emissions") + ggtitle("Total Emissions from Coal by Year in US")
 dev.off()
+
+
+## The coal combustion emissions changed gradually from 1999 to 2005 , but decreased abruptly from 2005 to 2008.
